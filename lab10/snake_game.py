@@ -1,6 +1,7 @@
 import pygame
 import sys
 import time
+import random
 from db_manager import GameDB
 
 class SnakeGame:
@@ -11,7 +12,8 @@ class SnakeGame:
         self.user_id = self.db.get_or_create_user(self.username)
         self.current_level = self.db.get_user_level(self.user_id)
         self.level_config = self.db.get_level_config(self.current_level)
-        
+        self.BLOCK_SIZE = 20  
+
         self.speed = self.level_config[0]
         self.walls = self.level_config[1]["walls"]
         
@@ -19,8 +21,13 @@ class SnakeGame:
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption(f"Snake Game - Level {self.current_level}")
         
-        self.snake = [[100, 50], [90, 50], [80, 50]]
-        self.food = [300, 300]
+        self.snake = [
+    [5 * self.BLOCK_SIZE, 2 * self.BLOCK_SIZE],
+    [4 * self.BLOCK_SIZE, 2 * self.BLOCK_SIZE],
+    [3 * self.BLOCK_SIZE, 2 * self.BLOCK_SIZE]
+]
+        self.food = [15 * self.BLOCK_SIZE, 15 * self.BLOCK_SIZE]
+
         self.direction = 'RIGHT'
         self.score = 0
         self.game_paused = False
@@ -37,11 +44,11 @@ class SnakeGame:
     def draw_snake(self):
         """Отрисовка змейки"""
         for pos in self.snake:
-            pygame.draw.rect(self.screen, (0, 255, 0), pygame.Rect(pos[0], pos[1], 10, 10))
+            pygame.draw.rect(self.screen, (0, 255, 0), pygame.Rect(pos[0], pos[1], self.BLOCK_SIZE, self.BLOCK_SIZE))
 
     def draw_food(self):
         """Отрисовка еды"""
-        pygame.draw.rect(self.screen, (255, 0, 0), pygame.Rect(self.food[0], self.food[1], 10, 10))
+        pygame.draw.rect(self.screen, (255, 0, 0), pygame.Rect(self.food[0], self.food[1], self.BLOCK_SIZE, self.BLOCK_SIZE))
 
     def draw_walls(self):
         """Отрисовка стен"""
@@ -51,13 +58,15 @@ class SnakeGame:
     def move_snake(self):
         """Движение змейки"""
         if self.direction == 'RIGHT':
-            self.snake.insert(0, [self.snake[0][0] + 10, self.snake[0][1]])
+            self.snake.insert(0, [self.snake[0][0] + self.BLOCK_SIZE, self.snake[0][1]])
+
+
         elif self.direction == 'LEFT':
-            self.snake.insert(0, [self.snake[0][0] - 10, self.snake[0][1]])
+            self.snake.insert(0, [self.snake[0][0] - self.BLOCK_SIZE, self.snake[0][1]])
         elif self.direction == 'UP':
-            self.snake.insert(0, [self.snake[0][0], self.snake[0][1] - 10])
+            self.snake.insert(0, [self.snake[0][0], self.snake[0][1] - self.BLOCK_SIZE])
         elif self.direction == 'DOWN':
-            self.snake.insert(0, [self.snake[0][0], self.snake[0][1] + 10])
+            self.snake.insert(0, [self.snake[0][0], self.snake[0][1] + self.BLOCK_SIZE])
         
         # Проверка на съедение еды
         if self.snake[0] == self.food:
@@ -70,9 +79,10 @@ class SnakeGame:
         """Генерация новой еды"""
         while True:
             self.food = [
-                round((pygame.time.get_ticks() * 3) % (self.width - 10) / 10) * 10,
-                round((pygame.time.get_ticks() * 7) % (self.height - 10) / 10) * 10
-            ]
+    random.randint(0, (self.width - self.BLOCK_SIZE) // self.BLOCK_SIZE) * self.BLOCK_SIZE,
+    random.randint(0, (self.height - self.BLOCK_SIZE) // self.BLOCK_SIZE) * self.BLOCK_SIZE
+]
+
             # Проверка, чтобы еда не появилась в стене или в змейке
             food_in_wall = any(
                 wall[0] <= self.food[0] <= wall[0] + wall[2] and
@@ -121,7 +131,13 @@ class SnakeGame:
         level_text = self.font.render(f"Level: {self.current_level}", True, (255, 255, 255))
         self.screen.blit(score_text, (10, 10))
         self.screen.blit(level_text, (10, 40))
-
+    def display_game_over(self):
+        """Показать сообщение Game Over на экране"""
+        self.screen.fill((0, 0, 0))
+        game_over_text = self.font.render(f"Game Over! Your score: {self.score}", True, (255, 0, 0))
+        self.screen.blit(game_over_text, (self.width // 2 - 150, self.height // 2 - 20))
+        pygame.display.update()
+        time.sleep(3) 
     def run(self):
         """Основной игровой цикл"""
         while not self.game_over:
@@ -174,7 +190,8 @@ class SnakeGame:
                         if event.type == pygame.QUIT:
                             pygame.quit()
                             sys.exit()
-        
+   
+        self.display_game_over()
         self.db.close()
         print(f"Game Over! Your score: {self.score}")
 

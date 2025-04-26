@@ -61,21 +61,53 @@ class PhoneBook:
         except Exception as e:
             print(f"Ошибка при добавлении контакта: {e}")
     
-    def update_contact(self):
-        """Обновление данных контакта"""
+    def update_contact(self,name,phone):
+        """Обновление данных контакта с проверкой существования"""
         print("\nОбновление контакта")
-        phone = input("Введите телефон контакта для обновления: ")
         
+    
+        # Сначала проверяем, существует ли контакт с таким телефоном
+        self.cur.execute("SELECT COUNT(*) FROM phonebook WHERE first_name = %s", (name,))
+        if self.cur.fetchone()[0] == 0:
+            print("Ошибка: контакт с таким именем не найден!")
+        
+        else:
+            print("Имя иммется! ")
+            self.cur.execute("UPDATE phonebook SET phone = %s WHERE first_name = %s",(phone,name))
+            self.conn.commit()
+            return
+        
+        self.cur.execute("SELECT COUNT(*) FROM phonebook WHERE phone = %s", (phone,))
+        if self.cur.fetchone()[0] == 0:
+            print("Ошибка: контакт с таким именем не найден!")
+        
+        else:
+            print("Имя иммется! ")
+            self.cur.execute("UPDATE phonebook SET first_name = %s WHERE phone = %s",(name,phone))
+            self.conn.commit()
+            return
+        
+        
+        if self.cur.fetchone()[0] == 0:
+            print("Ошибка: контакт с таким телефоном не найден!")
+            
+        else:
+            print("Номер иммется! ")
+            return
+        
+        
+            
+    
         print("Что вы хотите изменить?")
         print("1 - Имя")
         print("2 - Фамилию")
         print("3 - Телефон")
         print("4 - Email")
         choice = input("Ваш выбор (1-4): ")
-        
+    
         field = None
         new_value = None
-        
+    
         if choice == '1':
             field = 'first_name'
             new_value = input("Новое имя: ")
@@ -85,22 +117,28 @@ class PhoneBook:
         elif choice == '3':
             field = 'phone'
             new_value = input("Новый телефон: ")
+            # Проверяем, не существует ли уже контакт с новым телефоном
+            self.cur.execute("SELECT COUNT(*) FROM phonebook WHERE phone = %s", (new_value,))
+            if self.cur.fetchone()[0] > 0:
+                print("Ошибка: контакт с таким телефоном уже существует!")
+                return
         elif choice == '4':
             field = 'email'
             new_value = input("Новый email: ")
         else:
             print("Неверный выбор!")
             return
-        
+    
         try:
             query = sql.SQL("UPDATE phonebook SET {} = %s WHERE phone = %s").format(
                 sql.Identifier(field)
-            )
+        )
             self.cur.execute(query, (new_value, phone))
             self.conn.commit()
             print("Контакт успешно обновлен!")
         except Exception as e:
             print(f"Ошибка при обновлении: {e}")
+            self.conn.rollback()
     
     def query_contacts(self):
         """Поиск контактов с фильтрами"""
@@ -180,7 +218,9 @@ class PhoneBook:
             elif choice == '3':
                 self.insert_from_console()
             elif choice == '4':
-                self.update_contact()
+                name = input("Name: ")
+                phone = input("Phone number: ")
+                self.update_contact(name,phone)
             elif choice == '5':
                 self.query_contacts()
             elif choice == '6':
@@ -197,3 +237,4 @@ class PhoneBook:
 if __name__ == "__main__":
     pb = PhoneBook()
     pb.show_menu()
+    
